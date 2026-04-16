@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WowoClean - UTP TIS</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .total-badge { background: #2c3e50; color: #fff; padding: 10px 15px; border-radius: 5px; font-weight: bold; }
+        .container-wrapper { display: flex; gap: 20px; }
+        .form-section, .list-section { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-section { flex: 1; height: fit-content; }
+        .list-section { flex: 2; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-weight: bold; }
+        .btn-primary { background: #3498db; }
+        .btn-warning { background: #f39c12; font-size: 12px; padding: 5px 10px;}
+        .btn-danger { background: #e74c3c; font-size: 12px; padding: 5px 10px;}
+        .error-msg { color: red; font-size: 12px; margin-top: 5px; display: block; }
+        .card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
+        .card-info h4 { margin: 0 0 5px 0; }
+        .status-badge { font-size: 12px; padding: 3px 8px; border-radius: 10px; background: #2ecc71; color: white; }
+        .status-archived { background: #95a5a6; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>♻️ WowoClean Logistics</h2>
+        <div class="total-badge" id="totalWeightDisplay">Total Muatan: 0 kg</div>
+    </div>
+
+    <div class="container-wrapper">
+        <div class="form-section">
+            <h3>Registrasi Kontainer</h3>
+            <form id="containerForm">
+                <div class="form-group">
+                    <label>Container ID (2 Huruf + 5 Angka)</label>
+                    <input type="text" id="container_id" placeholder="Ex: WH12345">
+                    <span class="error-msg" id="err_container_id"></span>
+                </div>
+                <div class="form-group">
+                    <label>Jenis Limbah (Waste Type)</label>
+                    <select id="waste_type">
+                        <option value="Plastic">Plastic</option>
+                        <option value="Chemical">Chemical</option>
+                        <option value="Organic">Organic</option>
+                        <option value="Electronic">Electronic</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Berat (Kg)</label>
+                    <input type="number" id="weight_kg" placeholder="10 - 5000">
+                    <span class="error-msg" id="err_weight_kg"></span>
+                </div>
+                <button type="submit" class="btn btn-primary">Simpan Data</button>
+            </form>
+        </div>
+
+        <div class="list-section">
+            <h3>Daftar Kontainer</h3>
+            <div id="containerList">
+                </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
