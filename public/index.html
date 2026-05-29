@@ -7,16 +7,23 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
         .header { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .header-right { display: flex; gap: 10px; align-items: center; }
         .total-badge { background: #2c3e50; color: #fff; padding: 10px 15px; border-radius: 5px; font-weight: bold; }
+        
+        /* Tambahan styling buat form login */
+        #loginSection { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 400px; margin: 40px auto; text-align: center; }
+        #loginSection input { margin-bottom: 15px; }
+        
         .container-wrapper { display: flex; gap: 20px; }
         .form-section, .list-section { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .form-section { flex: 1; height: fit-content; }
         .list-section { flex: 2; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-weight: bold; }
-        .btn-primary { background: #3498db; }
+        .btn-primary { background: #3498db; width: 100%; }
+        .btn-secondary { background: #95a5a6; }
         .btn-warning { background: #f39c12; font-size: 12px; padding: 5px 10px;}
         .btn-danger { background: #e74c3c; font-size: 12px; padding: 5px 10px;}
         .error-msg { color: red; font-size: 12px; margin-top: 5px; display: block; }
@@ -28,42 +35,54 @@
 </head>
 <body>
 
-    <div class="header">
-        <h2>♻️ WowoClean Logistics</h2>
-        <div class="total-badge" id="totalWeightDisplay">Total Muatan: 0 kg</div>
+    <div id="loginSection">
+        <h3>Login Akses WowoClean</h3>
+        <input type="email" id="email" placeholder="Email (misal: admin@wowoclean.com)">
+        <input type="password" id="password" placeholder="Password">
+        <button class="btn btn-primary" onclick="window.loginUser(document.getElementById('email').value, document.getElementById('password').value)">Masuk</button>
     </div>
 
-    <div class="container-wrapper">
-        <div class="form-section">
-            <h3>Registrasi Kontainer</h3>
-            <form id="containerForm">
-                <div class="form-group">
-                    <label>Container ID (2 Huruf + 5 Angka)</label>
-                    <input type="text" id="container_id" placeholder="Ex: WH12345">
-                    <span class="error-msg" id="err_container_id"></span>
-                </div>
-                <div class="form-group">
-                    <label>Jenis Limbah (Waste Type)</label>
-                    <select id="waste_type">
-                        <option value="Plastic">Plastic</option>
-                        <option value="Chemical">Chemical</option>
-                        <option value="Organic">Organic</option>
-                        <option value="Electronic">Electronic</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Berat (Kg)</label>
-                    <input type="number" id="weight_kg" placeholder="10 - 5000">
-                    <span class="error-msg" id="err_weight_kg"></span>
-                </div>
-                <button type="submit" class="btn btn-primary">Simpan Data</button>
-            </form>
+    <div id="appSection" style="display: none;">
+        <div class="header">
+            <h2>♻️ WowoClean Logistics</h2>
+            <div class="header-right">
+                <div class="total-badge" id="totalWeightDisplay">Total Muatan: 0 kg</div>
+                <button class="btn btn-secondary" onclick="window.logoutUser()">Logout</button>
+            </div>
         </div>
 
-        <div class="list-section">
-            <h3>Daftar Kontainer</h3>
-            <div id="containerList">
-                </div>
+        <div class="container-wrapper">
+            <div class="form-section">
+                <h3>Registrasi Kontainer</h3>
+                <form id="containerForm">
+                    <div class="form-group">
+                        <label>Container ID (2 Huruf + 5 Angka)</label>
+                        <input type="text" id="container_id" placeholder="Ex: WH12345">
+                        <span class="error-msg" id="err_container_id"></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Jenis Limbah (Waste Type)</label>
+                        <select id="waste_type">
+                            <option value="Plastic">Plastic</option>
+                            <option value="Chemical">Chemical</option>
+                            <option value="Organic">Organic</option>
+                            <option value="Electronic">Electronic</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Berat (Kg)</label>
+                        <input type="number" id="weight_kg" placeholder="10 - 5000">
+                        <span class="error-msg" id="err_weight_kg"></span>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Simpan Data</button>
+                </form>
+            </div>
+
+            <div class="list-section">
+                <h3>Daftar Kontainer</h3>
+                <div id="containerList">
+                    </div>
+            </div>
         </div>
     </div>
 

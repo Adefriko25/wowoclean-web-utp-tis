@@ -3,138 +3,190 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache; 
+use App\Models\Container;
+use App\Models\TrackingLog;
+use OpenApi\Attributes as OA;
 
 class ContainerController extends Controller
 {
-    // Fungsi bantuan untuk mengambil data dummy pakai Cache
-    private function getDummyData()
-    {
-        if (!Cache::has('containers')) {
-            Cache::forever('containers', [
-                [
-                    'container_id' => 'WH12345',
-                    'waste_type' => 'Plastic',
-                    'weight_kg' => 200,
-                    'status' => 'Active',
-                    'tracking_logs' => [
-                        ['location' => 'Gudang A', 'timestamp' => '2026-04-16T08:00:00', 'description' => 'Disimpan di gudang awal']
-                    ]
-                ],
-                [
-                    'container_id' => 'CH98765',
-                    'waste_type' => 'Chemical',
-                    'weight_kg' => 500,
-                    'status' => 'Archived',
-                    'tracking_logs' => []
-                ]
-            ]);
-        }
-        return Cache::get('containers');
-    }
-
-    private function saveDummyData($data)
-    {
-        Cache::forever('containers', $data);
-    }
-
+    #[OA\Get(
+        path: "/api/v1/gateway/containers",
+        summary: "Ambil semua data kontainer",
+        security: [["bearerAuth" => []]],
+        tags: ["Containers V1"],
+        responses: [
+            new OA\Response(response: 200, description: "Berhasil mengambil data kontainer"),
+            new OA\Response(response: 401, description: "Unauthorized")
+        ]
+    )]
     public function index()
     {
-        return response()->json($this->getDummyData(), 200);
+        $containers = Container::with('trackingLogs')->get();
+        return response()->json($containers, 200);
     }
 
+    #[OA\Post(
+        path: "/api/v1/gateway/containers",
+        summary: "Tambah kontainer baru (Admin only)",
+        security: [["bearerAuth" => []]],
+        tags: ["Containers V1"],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: "container_id", type: "string", example: "WH12345"),
+                    new OA\Property(property: "waste_type", type: "string", example: "Plastic"),
+                    new OA\Property(property: "weight_kg", type: "number", example: 200)
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: "Data berhasil disimpan"),
+            new OA\Response(response: 401, description: "Unauthorized"),
+            new OA\Response(response: 403, description: "Forbidden - Hanya untuk Admin"),
+            new OA\Response(response: 422, description: "Validasi gagal")
+        ]
+    )]
     public function store(Request $request)
     {
         $request->validate([
-            'container_id' => ['required', 'string', 'regex:/^[A-Za-z]{2}[0-9]{5}$/'],
-            'waste_type' => 'required|string',
-            'weight_kg' => 'required|numeric|min:10|max:5000',
+            'container_id' => ['required', 'string', 'regex:/^[A-Za-z]{2}[0-9]{5}$/', 'unique:containers,container_id'],
+            'waste_type'   => 'required|string',
+            'weight_kg'    => 'required|numeric|min:10|max:5000',
         ]);
-
-        $data = $this->getDummyData();
-
-        if (collect($data)->where('container_id', $request->container_id)->first()) {
-            return response()->json([
-                'message' => 'Validasi gagal',
-                'errors' => ['container_id' => ['Container ID sudah digunakan.']]
-            ], 422);
-        }
 
         if ($request->waste_type === 'Chemical' && $request->weight_kg > 1000) {
             return response()->json([
                 'message' => 'Validasi gagal',
-                'errors' => ['weight_kg' => ['Untuk limbah Chemical, berat maksimal adalah 1000 kg.']]
+                'errors'  => ['weight_kg' => ['Untuk limbah Chemical, berat maksimal adalah 1000 kg.']]
             ], 422);
         }
 
-        $newContainer = [
+        $container = Container::create([
             'container_id' => strtoupper($request->container_id),
-            'waste_type' => $request->waste_type,
-            'weight_kg' => (float) $request->weight_kg,
-            'status' => 'Active',
-            'tracking_logs' => [
-                ['location' => 'Titik Awal', 'timestamp' => now()->toIso8601String(), 'description' => 'Kontainer didaftarkan']
-            ]
-        ];
+            'waste_type'   => $request->waste_type,
+            'weight_kg'    => (float) $request->weight_kg,
+            'status'       => 'Active',
+        ]);
 
-        $data[] = $newContainer;
-        $this->saveDummyData($data);
+        TrackingLog::create([
+            'container_id' => $container->container_id,
+            'location'     => 'Titik Awal',
+            'description'  => 'Kontainer didaftarkan'
+        ]);
 
-        return response()->json(['message' => 'Data berhasil disimpan', 'data' => $newContainer], 201);
+        $container->load('trackingLogs');
+
+        return response()->json(['message' => 'Data berhasil disimpan', 'data' => $container], 201);
     }
 
+    #[OA\Patch(
+        path: "/api/v1/gateway/containers/{id}/archive",
+        summary: "Arsipkan kontainer (Admin only)",
+        security: [["bearerAuth" => []]],
+        tags: ["Containers V1"],
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Status diubah menjadi Archived"),
+            new OA\Response(response: 401, description: "Unauthorized"),
+            new OA\Response(response: 403, description: "Forbidden - Hanya untuk Admin"),
+            new OA\Response(response: 404, description: "Data tidak ditemukan")
+        ]
+    )]
     public function archive($id)
     {
-        $data = $this->getDummyData();
-        $index = collect($data)->search(fn($item) => $item['container_id'] === $id);
+        $container = Container::find($id);
 
-        if ($index === false) {
+        if (!$container) {
             return response()->json(['message' => 'Data tidak ditemukan'], 404);
         }
 
-        $data[$index]['status'] = 'Archived';
-        $this->saveDummyData($data);
+        $container->update(['status' => 'Archived']);
 
         return response()->json(['message' => 'Status diubah menjadi Archived'], 200);
     }
 
+    #[OA\Delete(
+        path: "/api/v1/gateway/containers/{id}",
+        summary: "Hapus kontainer (Admin only)",
+        security: [["bearerAuth" => []]],
+        tags: ["Containers V1"],
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Data berhasil dihapus"),
+            new OA\Response(response: 401, description: "Unauthorized"),
+            new OA\Response(response: 403, description: "Forbidden - Hanya untuk Admin"),
+            new OA\Response(response: 404, description: "Data tidak ditemukan")
+        ]
+    )]
     public function destroy($id)
     {
-        $data = $this->getDummyData();
-        $index = collect($data)->search(fn($item) => $item['container_id'] === $id);
+        $container = Container::find($id);
 
-        if ($index === false) {
+        if (!$container) {
             return response()->json(['message' => 'Data tidak ditemukan'], 404);
         }
 
-        array_splice($data, $index, 1);
-        $this->saveDummyData($data);
+        $container->delete();
 
         return response()->json(['message' => 'Data berhasil dihapus'], 200);
     }
 
+    #[OA\Get(
+        path: "/api/v1/gateway/containers/search",
+        summary: "Cari kontainer berdasarkan filter",
+        security: [["bearerAuth" => []]],
+        tags: ["Containers V1"],
+        parameters: [
+            new OA\Parameter(name: "type", in: "query", required: false, schema: new OA\Schema(type: "string", example: "Plastic")),
+            new OA\Parameter(name: "min_weight", in: "query", required: false, schema: new OA\Schema(type: "number", example: 100))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Hasil pencarian kontainer"),
+            new OA\Response(response: 401, description: "Unauthorized")
+        ]
+    )]
     public function search(Request $request)
     {
-        $data = collect($this->getDummyData());
+        $query = Container::with('trackingLogs');
 
         if ($request->has('type')) {
-            $data = $data->where('waste_type', $request->type);
-        }
-        if ($request->has('min_weight')) {
-            $data = $data->where('weight_kg', '>=', $request->min_weight);
+            $query->where('waste_type', $request->type);
         }
 
-        return response()->json($data->values()->all(), 200);
+        if ($request->has('min_weight')) {
+            $query->where('weight_kg', '>=', $request->min_weight);
+        }
+
+        return response()->json($query->get(), 200);
     }
 
+    #[OA\Get(
+        path: "/api/v1/gateway/containers/{id}/logs",
+        summary: "Ambil tracking logs kontainer",
+        security: [["bearerAuth" => []]],
+        tags: ["Containers V1"],
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Data logs berhasil diambil"),
+            new OA\Response(response: 401, description: "Unauthorized"),
+            new OA\Response(response: 404, description: "Data tidak ditemukan")
+        ]
+    )]
     public function logs($id)
     {
-        $data = collect($this->getDummyData())->firstWhere('container_id', $id);
+        $container = Container::with('trackingLogs')->find($id);
 
-        if (!$data) {
+        if (!$container) {
             return response()->json(['message' => 'Data tidak ditemukan'], 404);
         }
 
-        return response()->json($data['tracking_logs'], 200);
+        return response()->json($container->trackingLogs, 200);
     }
 }
